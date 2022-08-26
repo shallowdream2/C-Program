@@ -116,6 +116,7 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     {
         val -= MINN;
     }
+    
     p.val = val;
 }
 
@@ -210,7 +211,7 @@ void dfs(game &g,int depth, path p, priority_queue<path> &q, int posx, int posy)
     }
     return;
 }
-int mynum=2019201417;
+int mynum=2021200973;
 void play()
 {
 
