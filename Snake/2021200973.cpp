@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 using namespace std;
-#define for(i, m, n) for(int i = (m); i <(n); ++i)
+#define _for(i, m, n) for(int i = (m); i <(n); ++i)
 #define MINN -100000
 int action[2][4] = {{0,0,1,-1},{1,-1,0,0}};
 // right left down up
@@ -67,21 +67,21 @@ bool is_possible_path(game &G, int duration, path &p) //没有判断是否会掉
     else
     {
         // mark other players
-        for (i, 0, G.players.size())
+        _for (i, 0, G.players.size())
         {
-            for (j, 0, G.players[i].length)
+            _for (j, 0, G.players[i].length)
             {
                 vis[G.players[i].x[j]][G.players[i].y[j]] = 1;
             }
         }
 
         // mark the obstacle
-        for (i, 0, G.obs.size())
+        _for (i, 0, G.obs.size())
         {
             int r = G.obs[i].r; // effection
-            for (j, 0, r + 1)
+            _for (j, 0, r + 1)
             {
-                for (k, 0, r + 1)
+                _for (k, 0, r + 1)
                 {
                     if (j + k <= r)
                         vis[G.obs[i].x + j][G.obs[i].y + k] = 1;
@@ -90,7 +90,7 @@ bool is_possible_path(game &G, int duration, path &p) //没有判断是否会掉
         }
 
         // check the path
-        for (i, 0, p.x.size())
+        _for (i, 0, p.x.size())
         {
             if (vis[p.x[i]][p.y[i]])
                 return false;
@@ -103,11 +103,11 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     int vmap[40][40];
     int val = 0;
     memset(vmap, 0, sizeof(vmap));
-    for (i, 0, g.re.size())
+    _for (i, 0, g.re.size())
     {
         vmap[g.re[i].x][g.re[i].y] += g.re[i].v;
     }
-    for (i, 0, p.x.size())
+    _for (i, 0, p.x.size())
     {
 
         val += vmap[p.x[i]][p.y[i]];
@@ -127,7 +127,7 @@ game::game()
     cin >> t;
     cin >> k;
     re.clear();
-    for (i, 0, k)
+    _for (i, 0, k)
     {
         reward p;
         cin >> p.x >> p.y >> p.v;
@@ -135,7 +135,7 @@ game::game()
     }
     obs.clear();
     cin >> b;
-    for (i, 0, b)
+    _for (i, 0, b)
     {
         obstacle p;
         cin >> p.x >> p.y >> p.r >> p.t;
@@ -143,11 +143,11 @@ game::game()
     }
     cin >> n;
     this->players.clear();
-    for (i, 0, n)
+    _for (i, 0, n)
     {
         Snake p;
         cin >> p.number >> p.length >>p.score >> p.direction >> p.protection >> p.duration;
-        for (j, 0, p.length)
+        _for (j, 0, p.length)
         {
             int x, y;
             cin >> x >> y;
@@ -165,7 +165,7 @@ int Mdis(int x1, int y1, int x2, int y2) // calculate the distance
 
 Snake &search_snake(game &g, int number)
 {
-    for (i, 0, g.players.size())
+    _for (i, 0, g.players.size())
     {
         if (number == g.players[i].number)
             return g.players[i];
@@ -174,7 +174,7 @@ Snake &search_snake(game &g, int number)
 }
 
 
-int visit[40][40];
+int Visit[40][40];
 void dfs(game &g,int depth, path p, priority_queue<path> &q, int posx, int posy) //默认搜索10格以内的物品
 {
     p.x.push_back(posx);
@@ -189,13 +189,13 @@ void dfs(game &g,int depth, path p, priority_queue<path> &q, int posx, int posy)
     {
         int tx, ty;
 
-        for (i, 0, 4)
+        _for (i, 0, 4)
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 40 && tx >= 0 && ty >= 0 && ty < 40&&(!visit[tx][ty])) // Do not run the wall
+            if (tx < 40 && tx >= 0 && ty >= 0 && ty < 40&&(!Visit[tx][ty])) // Do not run the wall
             {
-                visit[tx][ty]=1;
+                Visit[tx][ty]=1;
                 if (tx > posx)
                     p.dir.push_back(2);
                 else if (tx < posx)
@@ -205,7 +205,7 @@ void dfs(game &g,int depth, path p, priority_queue<path> &q, int posx, int posy)
                 else if (ty < posy)
                     p.dir.push_back(1);
                 dfs(g, depth + 1, p, q, tx, ty);
-                visit[tx][ty]=0;
+                Visit[tx][ty]=0;
             }
         }
     }
