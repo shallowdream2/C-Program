@@ -3,15 +3,15 @@ using namespace std;
 #define _for(i, a, b) for (int i = (a); i < (b); ++i)
 #define MAXX 100000
 #define DEBUG_MODE
-int action[2][4] = {{0, -1, 0, 1}, {-1, 0, 1, 0}};// left up right down
-int vis[40][40];   //标记障碍物
-int vmap[40][40];  //标记价值
-int Visit[40][40]; //标记搜索过
+int action[2][4] = {{0, -1, 0, 1}, {-1, 0, 1, 0}}; // left up right down
+int vis[40][40];                                   //标记障碍物
+int vmap[40][40];                                  //标记价值
+int Visit[40][40];                                 //标记搜索过
 int mynum = 2021200973;
-int areaValue[48];//48个区域分别搜索价值
-#define alpha 0.6 //权重参数
-#define beta 0.4  //
-
+int areaValue[48];  // 48个区域分别搜索价值
+#define alpha 0.7   //权重参数
+#define beta 0.3    //
+#define episode 0.1 //随机化参数
 struct reward
 {
     int x, y, v;
@@ -43,6 +43,7 @@ public:
     vector<obstacle> obs;
     vector<Snake> players;
     game();
+    int time;
 };
 
 class path
@@ -80,15 +81,15 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     int val_2 = 0; //区域收益
     _for(i, 0, p.x.size())
     {
-        val_1+= vmap[p.x[i]][p.y[i]];
-        val_2+=areaValue[p.x[i]/5*8+p.y[i]/5];
-        if(vmap[p.x[i]][p.y[i]]==0)//价值相同优先走最快路径
+        val_1 += vmap[p.x[i]][p.y[i]] * (10 - i); //递减
+        val_2 += areaValue[p.x[i] / 5 * 8 + p.y[i] / 5];
+        if (vmap[p.x[i]][p.y[i]] == 0) //价值相同优先走最快路径
         {
-            val_1-=0.3;//路径惩罚
+            val_1 -= 0.5; //路径惩罚
         }
     }
-    
-    p.val = val_1*alpha+val_2*beta;
+
+    p.val = val_1 * alpha + val_2 * beta;
 }
 
 game::game()
@@ -96,6 +97,7 @@ game::game()
     int t;
     int k, b, n;
     cin >> t;
+    time = t;
     cin >> k;
     re.clear();
     _for(i, 0, k)
@@ -168,7 +170,7 @@ game::game()
     _for(i, 0, this->re.size())
     {
         if (re[i].v == -1)
-            vmap[re[i].x][re[i].y] += 2; //增长道具
+            vmap[re[i].x][re[i].y] += 1; //增长道具
         else if (re[i].v == -2)
             vmap[re[i].x][re[i].y] += 2; //盾牌
         else
@@ -177,13 +179,14 @@ game::game()
         }
     }
 
-    //mark the area-value
-    _for(i,0,30)
+    // mark the area-value
+    _for(i, 0, 30)
     {
-      _for(j,0,40)
-      {
-        areaValue[i/5*8+j/5]+=vmap[i][j];
-      }
+        _for(j, 0, 40)
+        {
+            areaValue[i / 5 * 8 + j / 5] += vmap[i][j];
+            areaValue[i / 5 * 8 + j / 5] -=vis[i][j];
+        }
     }
 }
 
@@ -251,12 +254,9 @@ void play()
     ans = q.top();
     if (ans.val < 0 && me.protection > 0)
         cout << '4';
-
-    if (ans.dir.size() > 0)
-        cout << ans.dir[0];
     else
     {
-        cout << me.direction;
+        cout << ans.dir[0];
     }
 
     // debug
