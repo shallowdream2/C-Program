@@ -1,10 +1,16 @@
 #include <bits/stdc++.h>
 using namespace std;
+#define _for(i, a, b) for (int i = (a); i < (b); ++i)
+#define MAXX 100000
+#define DEBUG_MODE
+int action[2][4] = {{0, -1, 0, 1}, {-1, 0, 1, 0}};// left up right down
+int vis[40][40];   //标记障碍物
+int vmap[40][40];  //标记价值
+int Visit[40][40]; //标记搜索过
+int mynum = 2021200973;
 
-#define _for(i, a, b) for (unsigned int i = (a); i < (b); ++i)
-#define MINN -100000
-int action[2][4] = {{0, 0, 1, -1}, {1, -1, 0, 0}};
-// right left down up
+
+
 struct reward
 {
     int x, y, v;
@@ -55,67 +61,26 @@ public:
         val = 0;
         duration = 0;
     }
+    path &operator=(const path &p)
+    {
+        this->x = p.x;
+        this->y = p.y;
+        this->dir = p.dir;
+        this->duration = p.duration;
+        this->val = p.val;
+        return *this;
+    }
 };
 
-bool is_possible_path(game &G, int duration, path &p) //没有判断是否会掉出地图
-{
-    int vis[40][40];
-    memset(vis, 0, sizeof(vis));
-    if (duration > 1) //有保护状态
-    {
-        return true;
-    }
-    else
-    {
-        // mark other players
-        _for(i, 0, G.players.size())
-        {
-            _for(j, 0, G.players[i].length)
-            {
-                vis[G.players[i].x[j]][G.players[i].y[j]] = 1;
-            }
-        }
-
-        // mark the obstacle
-        _for(i, 0, G.obs.size())
-        {
-            int r = G.obs[i].r; // effection
-            _for(j, 0, r + 1)
-            {
-                _for(k, 0, r + 1)
-                {
-                    if (j + k <= r)
-                        vis[G.obs[i].x + j][G.obs[i].y + k] = 1;
-                }
-            }
-        }
-
-        // check the path
-        _for(i, 0, p.x.size())
-        {
-            if (vis[p.x[i]][p.y[i]])
-                return false;
-        }
-    }
-    return true;
-}
 void val_cal(game &g, path &p) // calculate the path val_cal
 {
-    int vmap[40][40];
-    int val = 0;
-    memset(vmap, 0, sizeof(vmap));
-    _for(i, 0, g.re.size())
-    {
-        vmap[g.re[i].x][g.re[i].y] += g.re[i].v;
-    }
+
+    int val_1 = 0; //道具收益
+    int val_2 = 0; //区域收益
     _for(i, 0, p.x.size())
     {
 
         val += vmap[p.x[i]][p.y[i]];
-    }
-    if (!is_possible_path(g, p.duration, p))
-    {
-        val -= MINN;
     }
 
     p.val = val;
@@ -157,6 +122,55 @@ game::game()
         }
         this->players.push_back(p);
     }
+
+    // mark other players
+    _for(i, 0, this->players.size())
+    {
+        if (players[i].number == mynum)
+            continue;
+        _for(j, 0, this->players[i].length)
+        {
+            vis[this->players[i].x[j]][this->players[i].y[j]] = 1;
+        }
+        //标记蛇头周围的一格
+        _for(k, 0, 2)
+        {
+            int tx = players[i].x[0] + action[0][i];
+            int ty = players[i].y[0] + action[1][i];
+            if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+            {
+                vis[tx][ty] = 1;
+            }
+        }
+    }
+
+    // mark the obstacle
+    _for(i, 0, this->obs.size())
+    {
+        int r = this->obs[i].r; // effection
+        _for(j, -r, r + 1)
+        {
+            _for(k, -r, r + 1)
+            {
+                if (abs(j) + abs(k) <= r)
+                    vis[this->obs[i].x + j][this->obs[i].y + k] = 1;
+            }
+        }
+    }
+
+    // mark the value
+
+    _for(i, 0, this->re.size())
+    {
+        if (re[i].v == -1)
+            vmap[re[i].x][re[i].y] += 3; //增长道具
+        else if (re[i].v == -2)
+            vmap[re[i].x][re[i].y] += 4; //盾牌
+        else
+        {
+            vmap[re[i].x][re[i].y] += re[i].v;
+        }
+    }
 }
 
 int Mdis(int x1, int y1, int x2, int y2) // calculate the distance
@@ -174,11 +188,9 @@ Snake &search_snake(game &g, int number)
     return g.players[0];
 }
 
-int Visit[40][40];
 void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy, int dir) //默认搜索10格以内的物品
 {
-    p.x.push_back(posx);
-    p.y.push_back(posy);
+
     if (depth > 10)
     {
         val_cal(g, p);
@@ -188,59 +200,182 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
     else
     {
         int tx, ty;
-
         _for(i, 0, 4)
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 40 && tx >= 0 && ty >= 0 && ty < 40 && (!Visit[tx][ty])) // Do not run the wall
+            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2) && (!vis[tx][ty])) // Do not run the wall
             {
-                Visit[tx][ty] = 1;
-                if (tx > posx && dir != 3)//向下
+                Visit[tx][ty]++;
+                if (dir - i != 2 && i - dir != 2)
                 {
-                    p.dir.push_back(2);
-                    dfs(g, depth + 1, p, q, tx, ty, 2);
+                    p.dir.push_back(i); //存入方向
+                    p.x.push_back(tx);
+                    p.y.push_back(ty);
+                    dfs(g, depth + 1, p, q, tx, ty, i);
+                    p.dir.pop_back();
+                    p.x.pop_back();
+                    p.y.pop_back();
                 }
-                else if (tx < posx && dir != 2)//向上
-                {
-                    p.dir.push_back(3);
-                    dfs(g, depth + 1, p, q, tx, ty, 3);
-                }
-                else if (ty > posy && dir != 1)//向右
-                {
-                    p.dir.push_back(0);
-                    dfs(g, depth + 1, p, q, tx, ty, 0);
-                }
-                else if (ty < posy && dir != 0)//向左
-                {
-                    p.dir.push_back(1);
-                    dfs(g, depth + 1, p, q, tx, ty, 1);
-                }
-
-                Visit[tx][ty] = 0;
+                Visit[tx][ty]--;
             }
         }
     }
     return;
 }
-int mynum = 2021200973;
+
 void play()
 {
 
     game g;
     Snake me = search_snake(g, mynum); // get the infomation about myself
-    vector<path> ans;
     priority_queue<path> q;
     path p;
+    p.duration = me.duration;
     dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
-    p = q.top();
-    if (p.val < 0 && me.protection > 0)
+    path ans;
+    ans = q.top();
+    if (ans.val < 0 && me.protection > 0)
         cout << '4';
-    cout << p.dir[0];
+
+    if (ans.dir.size() > 0)
+        cout << ans.dir[0];
+    else
+    {
+        cout << me.direction;
+    }
+
+    // debug
+    //  cout << endl
+    //       << ans.val << endl
+    //       << ans.x[0] << " " << ans.y[0];
 }
 int main()
 {
     play();
 
+    // system("pause");
     return 0;
 }
+/*
+152
+100
+6 0 5
+20 0 2
+13 0 2
+13 1 1
+5 1 2
+0 1 1
+28 2 -1
+13 2 2
+9 3 2
+9 3 2
+17 3 2
+15 4 1
+0 4 1
+5 5 2
+3 5 -1
+10 5 5
+7 6 3
+14 6 3
+12 7 5
+3 7 5
+25 7 1
+26 8 5
+26 8 3
+19 9 3
+11 9 1
+20 9 1
+10 10 1
+6 10 1
+3 11 1
+29 11 -1
+4 11 3
+20 12 1
+28 12 -1
+14 12 3
+27 13 3
+24 13 5
+0 14 3
+27 14 2
+5 14 5
+3 15 -1
+25 15 5
+12 16 2
+27 16 -1
+17 16 -1
+27 17 2
+4 17 3
+24 18 3
+15 18 2
+29 18 2
+21 19 3
+20 19 1
+11 20 5
+22 20 1
+3 20 1
+9 21 2
+2 21 1
+5 22 1
+17 22 3
+6 22 -1
+18 23 1
+3 23 1
+2 23 1
+7 24 1
+28 24 2
+3 25 1
+26 25 -1
+19 25 3
+25 26 1
+10 26 2
+18 27 1
+22 27 1
+27 27 3
+15 28 2
+21 28 5
+27 29 1
+21 29 1
+14 29 1
+2 30 1
+18 30 5
+16 31 2
+3 31 1
+18 31 3
+25 32 5
+12 32 2
+6 33 5
+7 33 1
+10 33 1
+12 34 3
+16 34 1
+1 34 1
+18 35 1
+12 35 2
+11 36 3
+17 36 1
+25 36 1
+0 37 -1
+13 28 1
+2 38 1
+28 28 -2
+12 38 1
+0
+1
+2021200973 15 22 3 2 0
+29 39
+28 39
+27 39
+26 39
+25 39
+24 39
+23 39
+22 39
+22 38
+21 38
+20 38
+19 38
+18 38
+17 38
+16 38
+*/
