@@ -8,8 +8,9 @@ int vis[40][40];   //标记障碍物
 int vmap[40][40];  //标记价值
 int Visit[40][40]; //标记搜索过
 int mynum = 2021200973;
-
-
+int areaValue[48];//48个区域分别搜索价值
+#define alpha 0.6 //权重参数
+#define beta 0.4  //
 
 struct reward
 {
@@ -79,11 +80,11 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     int val_2 = 0; //区域收益
     _for(i, 0, p.x.size())
     {
-
-        val += vmap[p.x[i]][p.y[i]];
+        val_1 += vmap[p.x[i]][p.y[i]];
+        val_2+=areaValue[p.x[i]/5*8+p.y[i]/5];
     }
-
-    p.val = val;
+    
+    p.val = val_1*alpha+val_2*beta;
 }
 
 game::game()
@@ -158,18 +159,27 @@ game::game()
         }
     }
 
-    // mark the value
+    // mark the pointvalue
 
     _for(i, 0, this->re.size())
     {
         if (re[i].v == -1)
-            vmap[re[i].x][re[i].y] += 3; //增长道具
+            vmap[re[i].x][re[i].y] += 2; //增长道具
         else if (re[i].v == -2)
-            vmap[re[i].x][re[i].y] += 4; //盾牌
+            vmap[re[i].x][re[i].y] += 2; //盾牌
         else
         {
             vmap[re[i].x][re[i].y] += re[i].v;
         }
+    }
+
+    //mark the area-value
+    _for(i,0,30)
+    {
+      _for(j,0,40)
+      {
+        areaValue[i/5*8+j/5]+=vmap[i][j];
+      }
     }
 }
 
@@ -191,7 +201,7 @@ Snake &search_snake(game &g, int number)
 void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy, int dir) //默认搜索10格以内的物品
 {
 
-    if (depth > 10)
+    if (depth > 6)
     {
         val_cal(g, p);
         q.push(p);
