@@ -80,8 +80,12 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     int val_2 = 0; //区域收益
     _for(i, 0, p.x.size())
     {
-        val_1 += vmap[p.x[i]][p.y[i]];
+        val_1+= vmap[p.x[i]][p.y[i]];
         val_2+=areaValue[p.x[i]/5*8+p.y[i]/5];
+        if(vmap[p.x[i]][p.y[i]]==0)//价值相同优先走最快路径
+        {
+            val_1-=0.3;//路径惩罚
+        }
     }
     
     p.val = val_1*alpha+val_2*beta;
