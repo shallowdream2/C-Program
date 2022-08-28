@@ -8,10 +8,10 @@ int vis[40][40];                                   //标记障碍物
 int vmap[40][40];                                  //标记价值
 int Visit[40][40];                                 //标记搜索过
 int mynum = 2021200973;
-int areaValue[48];  // 48个区域分别搜索价值
-#define alpha 0.7   //权重参数
-#define beta 0.3    //
-#define episode 0.1 //随机化参数
+int areaValue[48]; // 48个区域分别搜索价值
+#define alpha 0.7  //权重参数
+#define beta 0.3   //
+#define episode 0
 struct reward
 {
     int x, y, v;
@@ -45,7 +45,7 @@ public:
     game();
     int time;
 };
-
+int Mdis(int x1, int y1, int x2, int y2) ;
 class path
 {
 public:
@@ -92,6 +92,12 @@ void val_cal(game &g, path &p) // calculate the path val_cal
     p.val = val_1 * alpha + val_2 * beta;
 }
 
+int eva(int i, int j) //计算地理位置加成
+{
+    int d = Mdis(i, j, 15, 20); //曼哈顿距离
+    d = -1*d * d * episode;        //平方
+    return d;
+}
 game::game()
 {
     int t;
@@ -133,20 +139,22 @@ game::game()
     // mark other players
     _for(i, 0, this->players.size())
     {
-        if (players[i].number == mynum)
-            continue;
-        _for(j, 0, this->players[i].length)
+        if (players[i].number != mynum)
+
         {
-            vis[this->players[i].x[j]][this->players[i].y[j]] = 1;
-        }
-        //标记蛇头周围的一格
-        _for(k, 0, 2)
-        {
-            int tx = players[i].x[0] + action[0][i];
-            int ty = players[i].y[0] + action[1][i];
-            if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+            _for(j, 0, this->players[i].length)
             {
-                vis[tx][ty] = 1;
+                vis[this->players[i].x[j]][this->players[i].y[j]] = 1;
+            }
+            //标记蛇头周围的一格
+            _for(k, 0, 4)
+            {
+                int tx = players[i].x[0] + action[0][k];
+                int ty = players[i].y[0] + action[1][k];
+                if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+                {
+                    vis[tx][ty] = 1;
+                }
             }
         }
     }
@@ -184,8 +192,9 @@ game::game()
     {
         _for(j, 0, 40)
         {
-            areaValue[i / 5 * 8 + j / 5] += vmap[i][j];
-            areaValue[i / 5 * 8 + j / 5] -=vis[i][j];
+            areaValue[i / 5 * 8 + j / 5] += vmap[i][j]; //资源密集加成
+            areaValue[i / 5 * 8 + j / 5] -= vis[i][j];  //障碍惩罚
+            areaValue[i / 5 * 8 + j / 5] += eva(i, j);  //中心加成
         }
     }
 }
@@ -208,7 +217,7 @@ Snake &search_snake(game &g, int number)
 void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy, int dir) //默认搜索10格以内的物品
 {
 
-    if (depth > 6)
+    if (depth > 7)
     {
         val_cal(g, p);
         q.push(p);
@@ -221,7 +230,7 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2) && (!vis[tx][ty])) // Do not run the wall
+            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2)&&(p.duration>=2||(p.duration<2&&!vis[tx][ty])) )// Do not run the wall
             {
                 Visit[tx][ty]++;
                 if (dir - i != 2 && i - dir != 2)
@@ -252,7 +261,7 @@ void play()
     dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
     path ans;
     ans = q.top();
-    if (ans.val < 0 && me.protection > 0)
+    if (me.protection > 5)
         cout << '4';
     else
     {
