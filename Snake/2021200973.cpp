@@ -9,9 +9,11 @@ int vmap[40][40];                                  //标记价值
 int Visit[40][40];                                 //标记搜索过
 int mynum = 2021200973;
 int areaValue[48]; // 48个区域分别搜索价值
-#define alpha 0.7  //权重参数
-#define beta 0.3   //
-#define episode 0
+#define alpha 0.7  //资源参数
+#define beta 0.3   //区域参数
+#define episode 0 //中心参数
+#define maxdepth 7
+#define gamma 1 //路径惩罚参数
 struct reward
 {
     int x, y, v;
@@ -34,6 +36,7 @@ public:
     int duration;   //当前盾牌持续时间
     vector<int> x;
     vector<int> y;
+    
 };
 
 class game
@@ -44,6 +47,7 @@ public:
     vector<Snake> players;
     game();
     int time;
+    
 };
 int Mdis(int x1, int y1, int x2, int y2) ;
 class path
@@ -85,7 +89,7 @@ void val_cal(game &g, path &p) // calculate the path val_cal
         val_2 += areaValue[p.x[i] / 5 * 8 + p.y[i] / 5];
         if (vmap[p.x[i]][p.y[i]] == 0) //价值相同优先走最快路径
         {
-            val_1 -= 0.5; //路径惩罚
+            val_1 -= gamma; //路径惩罚
         }
     }
 
@@ -100,6 +104,8 @@ int eva(int i, int j) //计算地理位置加成
 }
 game::game()
 {
+    int pval=2;
+    if(n>4)pval=3;
     int t;
     int k, b, n;
     cin >> t;
@@ -134,6 +140,7 @@ game::game()
             p.y.push_back(y);
         }
         this->players.push_back(p);
+        
     }
 
     // mark other players
@@ -178,9 +185,9 @@ game::game()
     _for(i, 0, this->re.size())
     {
         if (re[i].v == -1)
-            vmap[re[i].x][re[i].y] += 1; //增长道具
+            vmap[re[i].x][re[i].y] += 0.5; //增长道具
         else if (re[i].v == -2)
-            vmap[re[i].x][re[i].y] += 2; //盾牌
+            vmap[re[i].x][re[i].y] += pval; //盾牌
         else
         {
             vmap[re[i].x][re[i].y] += re[i].v;
@@ -217,7 +224,7 @@ Snake &search_snake(game &g, int number)
 void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy, int dir) //默认搜索10格以内的物品
 {
 
-    if (depth > 7)
+    if (depth >= maxdepth)
     {
         val_cal(g, p);
         q.push(p);
@@ -250,6 +257,12 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
     return;
 }
 
+void is_protect(Snake &me,game &g,path &ans)//判断是否开盾
+{
+   if(me.protection>0&&me.duration<2&&ans.dir.size()==0)return true;
+   if(me.protection>5&&ans.val>30)return true;
+   return false;
+}
 void play()
 {
 
@@ -261,7 +274,7 @@ void play()
     dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
     path ans;
     ans = q.top();
-    if (me.protection > 5)
+    if (is_protect(me,g,ans))
         cout << '4';
     else
     {
@@ -280,125 +293,3 @@ int main()
     // system("pause");
     return 0;
 }
-/*
-152
-100
-6 0 5
-20 0 2
-13 0 2
-13 1 1
-5 1 2
-0 1 1
-28 2 -1
-13 2 2
-9 3 2
-9 3 2
-17 3 2
-15 4 1
-0 4 1
-5 5 2
-3 5 -1
-10 5 5
-7 6 3
-14 6 3
-12 7 5
-3 7 5
-25 7 1
-26 8 5
-26 8 3
-19 9 3
-11 9 1
-20 9 1
-10 10 1
-6 10 1
-3 11 1
-29 11 -1
-4 11 3
-20 12 1
-28 12 -1
-14 12 3
-27 13 3
-24 13 5
-0 14 3
-27 14 2
-5 14 5
-3 15 -1
-25 15 5
-12 16 2
-27 16 -1
-17 16 -1
-27 17 2
-4 17 3
-24 18 3
-15 18 2
-29 18 2
-21 19 3
-20 19 1
-11 20 5
-22 20 1
-3 20 1
-9 21 2
-2 21 1
-5 22 1
-17 22 3
-6 22 -1
-18 23 1
-3 23 1
-2 23 1
-7 24 1
-28 24 2
-3 25 1
-26 25 -1
-19 25 3
-25 26 1
-10 26 2
-18 27 1
-22 27 1
-27 27 3
-15 28 2
-21 28 5
-27 29 1
-21 29 1
-14 29 1
-2 30 1
-18 30 5
-16 31 2
-3 31 1
-18 31 3
-25 32 5
-12 32 2
-6 33 5
-7 33 1
-10 33 1
-12 34 3
-16 34 1
-1 34 1
-18 35 1
-12 35 2
-11 36 3
-17 36 1
-25 36 1
-0 37 -1
-13 28 1
-2 38 1
-28 28 -2
-12 38 1
-0
-1
-2021200973 15 22 3 2 0
-29 39
-28 39
-27 39
-26 39
-25 39
-24 39
-23 39
-22 39
-22 38
-21 38
-20 38
-19 38
-18 38
-17 38
-16 38
-*/
