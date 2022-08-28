@@ -104,13 +104,14 @@ int eva(int i, int j) //计算地理位置加成
 }
 game::game()
 {
-    int pval=2;
-    if(n>4)pval=3;
+   
     int t;
     int k, b, n;
     cin >> t;
     time = t;
     cin >> k;
+     int pval=2;
+    if(n>4)pval=3;
     re.clear();
     _for(i, 0, k)
     {
@@ -257,7 +258,7 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
     return;
 }
 
-void is_protect(Snake &me,game &g,path &ans)//判断是否开盾
+bool is_protect(Snake &me,game &g,path &ans)//判断是否开盾
 {
    if(me.protection>0&&me.duration<2&&ans.dir.size()==0)return true;
    if(me.protection>5&&ans.val>30)return true;
