@@ -2,7 +2,6 @@
 using namespace std;
 #define _for(i, a, b) for (int i = (a); i < (b); ++i)
 #define MAXX 100000
-#define DEBUG_MODE
 int action[2][4] = {{0, -1, 0, 1}, {-1, 0, 1, 0}}; // left up right down
 int vis[40][40];                                   //标记障碍物
 int vmap[40][40];                                  //标记价值
@@ -12,7 +11,7 @@ int areaValue[48]; // 48个区域分别搜索价值
 #define alpha 0.7  //资源参数
 #define beta 0.3   //区域参数
 #define episode 0  //中心参数
-#define maxdepth 7
+#define maxdepth 10
 #define gamma 1 //路径惩罚参数
 struct reward
 {
@@ -109,8 +108,10 @@ game::game()
     time = t;
     cin >> k;
     int pval = 2;
-    if (n > 4 && time <50)
+    if (n > 4 && time < 50)
         pval = 3;
+    if (n > 3 && time < 20)
+        pval = 5;
     re.clear();
     _for(i, 0, k)
     {
@@ -262,16 +263,16 @@ bool is_protect(Snake &me, game &g, path &ans) //判断是否开盾
     {
         int tx = me.x[0] + action[0][i];
         int ty = me.y[0] + action[1][i];
-        if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && vis[tx][ty]&&me.duration<2)
+        if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && vis[tx][ty] && me.duration < 2)
         {
-            
+
             return true;
         }
     }
 
-    if (g.time <30&&me.duration<2)
+    if (g.time < 30 && me.duration < 2)
     {
-        
+
         return true;
     }
     return false;
