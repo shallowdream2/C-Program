@@ -2,14 +2,15 @@
 using namespace std;
 #define _for(i, a, b) for (int i = (a); i < (b); ++i)
 #define MAXX 100000
-int action[2][4] = {{0, -1, 0, 1}, {-1, 0, 1, 0}}; // left up right down
-int vis[40][40];                                   //标记障碍物
-int vmap[40][40];                                  //标记价值
-int Visit[40][40];                                 //标记搜索过
+#define DEBUG_MODE
+int action[2][8] = {{0, -1, 0, 1, 0, -2, 0, 2}, {-1, 0, 1, 0, -2, 0, 2, 0}}; // left up right down
+int vis[40][40];                                                             //标记障碍物
+int vmap[40][40];                                                            //标记价值
+int Visit[40][40];                                                           //标记搜索过
 int mynum = 2021200973;
 int areaValue[48]; // 48个区域分别搜索价值
 #define alpha 0.7  //资源参数
-#define beta 0.3   //区域参数
+#define beta 0.4   //区域参数
 #define episode 0  //中心参数
 #define maxdepth 10
 #define gamma 1 //路径惩罚参数
@@ -102,16 +103,15 @@ int eva(int i, int j) //计算地理位置加成
 game::game()
 {
 
+    int flag;
     int t;
     int k, b, n;
     cin >> t;
     time = t;
     cin >> k;
     int pval = 2;
-    if (n > 4 && time < 50)
+    if (n > 4 && time > 50 && time < 200)
         pval = 3;
-    if (n > 3 && time < 20)
-        pval = 5;
     re.clear();
     _for(i, 0, k)
     {
@@ -153,16 +153,37 @@ game::game()
             {
                 vis[this->players[i].x[j]][this->players[i].y[j]] = 1;
             }
-            //标记蛇头周围的一格
-            _for(k, 0, 4)
+            //标记蛇头周围的2格
+            vis[players[i].x[0]][players[i].y[0]]=players[i].score;
+            if(players[i].score>30){
+            _for(k, 0, 8)
             {
+
                 int tx = players[i].x[0] + action[0][k];
                 int ty = players[i].y[0] + action[1][k];
                 if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
                 {
-                    vis[tx][ty] = 1;
+                    vis[tx][ty] = players[i].score;
                 }
             }
+            }
+            else
+            {
+                _for(k, 0, 4)
+            {
+
+                int tx = players[i].x[0] + action[0][k];
+                int ty = players[i].y[0] + action[1][k];
+                if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+                {
+                    vis[tx][ty] = players[i].score;
+                }
+            }
+            }
+        }
+        else
+        {
+            flag = i;
         }
     }
 
@@ -181,11 +202,15 @@ game::game()
     }
 
     // mark the pointvalue
-
+    int lval = 1;
+    if (players[flag].protection < 5)
+        pval = 5;
+    if (time > 200)
+        lval = 2;
     _for(i, 0, this->re.size())
     {
         if (re[i].v == -1)
-            vmap[re[i].x][re[i].y] += 0.5; //增长道具
+            vmap[re[i].x][re[i].y] += lval; //增长道具
         else if (re[i].v == -2)
             vmap[re[i].x][re[i].y] += pval; //盾牌
         else
@@ -237,7 +262,7 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2) && (p.duration >= 2 || (p.duration < 2 && !vis[tx][ty]))) // Do not run the wall
+            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && Visit[tx][ty] <= 2 && (p.duration > 1 || vis[tx][ty]==0)) // Do not run the wall
             {
                 Visit[tx][ty]++;
                 if (dir - i != 2 && i - dir != 2)
@@ -245,7 +270,9 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
                     p.dir.push_back(i); //存入方向
                     p.x.push_back(tx);
                     p.y.push_back(ty);
+                    p.duration--;
                     dfs(g, depth + 1, p, q, tx, ty, i);
+                    p.duration++;
                     p.dir.pop_back();
                     p.x.pop_back();
                     p.y.pop_back();
@@ -259,15 +286,12 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
 
 bool is_protect(Snake &me, game &g, path &ans) //判断是否开盾
 {
-    _for(i, 0, 4)
-    {
-        int tx = me.x[0] + action[0][i];
-        int ty = me.y[0] + action[1][i];
-        if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && vis[tx][ty] && me.duration < 2)
-        {
 
-            return true;
-        }
+    int tx = ans.x[0];
+    int ty = ans.y[0];
+    if (vis[tx][ty] > 2 && me.duration < 4)
+    {
+        return true;
     }
 
     if (g.time < 30 && me.duration < 2)
@@ -277,6 +301,18 @@ bool is_protect(Snake &me, game &g, path &ans) //判断是否开盾
     }
     return false;
 }
+bool is_attack(Snake &me, path &ans)
+{
+    int tx = ans.x[0];
+    int ty = ans.y[0];
+    if (vis[tx][ty] > 50&&me.score>30)
+    {
+        cout<<"5 "<<tx-me.x[0]<<" "<<ty-me.y[0];
+        return true;
+    }
+    return false;
+}
+
 void play()
 {
 
@@ -284,13 +320,14 @@ void play()
     Snake me = search_snake(g, mynum); // get the infomation about myself
     priority_queue<path> q;
     path p;
-    p.duration = me.duration;
+    p.duration = me.duration-1;
     dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
     path ans;
     ans = q.top();
     if (is_protect(me, g, ans))
         cout << '4';
-    else
+    else if(is_attack(me,ans));
+    else 
     {
         cout << ans.dir[0];
     }
@@ -299,6 +336,6 @@ int main()
 {
     play();
 
-    system("pause");
+    // system("pause");
     return 0;
 }
