@@ -14,7 +14,8 @@ using namespace std;
 #define maxDepth 5 //最大搜索深度
 #define minn -10000000
 #define maxx 10000000
-#define area_r 2
+#define area_r 3
+#define DEBUGMODE 0
 //五元组计算规则
 int eva(vector<int> a, int player) //假设自己是黑棋
 {
@@ -104,11 +105,11 @@ chess::chess(chess &nowchess, int X, int Y)
     child.clear();
     this->X = X;
     this->Y = Y;
-    memcpy(board, nowchess.board, sizeof(board));
+    memcpy(board, nowchess.board, sizeof(nowchess.board));
     if (player == 0)
-        board[X][Y] = (depth & 1);
+        board[X][Y] = (depth & 1) ^ 1;
     else
-        board[X][Y] = (depth % 1) ^ 1;
+        board[X][Y] = (depth % 1);
     player = nowchess.player;
 }
 
@@ -145,32 +146,20 @@ void chess::evaluate() //评估局面得分
             }
             if (a.size() == 5)
             {
-                if (player == 0)
-                    score += eva(a, 0)-eva(a,1);
-                else
-                    score += eva(a, 1);
+                score += eva(a, 0) - eva(a, 1);
             }
             if (b.size() == 5)
             {
-                if (player == 0)
-                    score += eva(b, 0);
-                else
-                    score += eva(b, 1);
+                score += eva(b, 0) - eva(b, 1);
             }
 
             if (c.size() == 5)
             {
-                if (player == 0)
-                    score += eva(c, 0);
-                else
-                    score += eva(c, 1);
+                score += eva(c, 0) - eva(c, 1);
             }
             if (d.size() == 5)
             {
-                if (player == 0)
-                    score += eva(d, 0);
-                else
-                    score += eva(d, 1);
+                score += eva(d, 0) - eva(d, 1);
             }
         }
     }
@@ -179,7 +168,7 @@ void chess::evaluate() //评估局面得分
 
 bool chess::is_max_node() // 0层为根节点
 {
-    return !(depth & 1);
+    return (depth & 1) ^ 1;
 };
 
 int chess::iswin()
@@ -224,6 +213,8 @@ void Tree::choose_pos()
     {
         if ((*n)->value > ans->value)
             ans = *n;
+        if (DEBUGMODE)
+            cout << (*n)->X << " " << (*n)->Y << " " << (*n)->value << endl;
     }
 }
 vector<pair<int, int>> Tree::get_possible_pos(chess *ch)
@@ -264,7 +255,7 @@ vector<pair<int, int>> Tree::get_possible_pos(chess *ch)
     return t;
 }
 
-int Tree::try_to(chess *ch)
+int Tree::try_to(chess *ch) //新建子节点
 {
     vector<pair<int, int>> goal = get_possible_pos(ch);
     for (int i = 0; i < goal.size(); ++i)
@@ -282,7 +273,7 @@ bool Tree::is_cut(chess *ch)
         return false;
     if (ch->is_max_node() && ch->value > ch->father->value)
         return true; // max节点剪枝规则
-    if (!ch->is_max_node() && ch->value < ch->father->value)
+    if ((!ch->is_max_node()) && ch->value < ch->father->value)
         return true;
     return is_cut(ch->father);
 }
@@ -293,6 +284,7 @@ void Tree::update(chess *ch)
     if (ch->child.empty())
     {
         update(ch->father);
+        return;
     }
     if (ch->is_max_node()) // max节点
     {
@@ -300,7 +292,7 @@ void Tree::update(chess *ch)
         for (auto i = ch->child.begin(); i != ch->child.end(); ++i)
         {
             if ((*i)->value != maxx)
-                val = max(val, (*i)->value);
+                val = max(val, (*i)->value); //所有子节点中估值最大的
         }
         if (val > ch->value)
         {
@@ -314,7 +306,7 @@ void Tree::update(chess *ch)
         for (auto i = ch->child.begin(); i != ch->child.end(); i++)
         {
             if ((*i)->value != minn)
-                val = min(val, (*i)->value);
+                val = min(val, (*i)->value); //所有子节点估值最小的
         }
         if (val < ch->value)
         {
@@ -354,5 +346,6 @@ int main()
     Tree tr;
     tr.minimax();
     cout << tr.ans->X << " " << tr.ans->Y;
-    system("pause");
+    // cout<<tr.ans->value;
+     //system("pause");
 }
