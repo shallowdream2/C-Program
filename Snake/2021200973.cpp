@@ -11,7 +11,7 @@ int mynum = 2021200973;
 int areaValue[48]; // 48个区域分别搜索价值
 #define alpha 0.7  //资源参数
 #define beta 0.3   //区域参数
-#define episode 0 //中心参数
+#define episode 0  //中心参数
 #define maxdepth 7
 #define gamma 1 //路径惩罚参数
 struct reward
@@ -36,7 +36,6 @@ public:
     int duration;   //当前盾牌持续时间
     vector<int> x;
     vector<int> y;
-    
 };
 
 class game
@@ -47,9 +46,8 @@ public:
     vector<Snake> players;
     game();
     int time;
-    
 };
-int Mdis(int x1, int y1, int x2, int y2) ;
+int Mdis(int x1, int y1, int x2, int y2);
 class path
 {
 public:
@@ -99,19 +97,20 @@ void val_cal(game &g, path &p) // calculate the path val_cal
 int eva(int i, int j) //计算地理位置加成
 {
     int d = Mdis(i, j, 15, 20); //曼哈顿距离
-    d = -1*d * d * episode;        //平方
+    d = -1 * d * d * episode;   //平方
     return d;
 }
 game::game()
 {
-   
+
     int t;
     int k, b, n;
     cin >> t;
     time = t;
     cin >> k;
-     int pval=2;
-    if(n>4)pval=3;
+    int pval = 2;
+    if (n > 4 && time <50)
+        pval = 3;
     re.clear();
     _for(i, 0, k)
     {
@@ -141,7 +140,6 @@ game::game()
             p.y.push_back(y);
         }
         this->players.push_back(p);
-        
     }
 
     // mark other players
@@ -238,7 +236,7 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2)&&(p.duration>=2||(p.duration<2&&!vis[tx][ty])) )// Do not run the wall
+            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && (Visit[tx][ty] <= 2) && (p.duration >= 2 || (p.duration < 2 && !vis[tx][ty]))) // Do not run the wall
             {
                 Visit[tx][ty]++;
                 if (dir - i != 2 && i - dir != 2)
@@ -258,11 +256,25 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
     return;
 }
 
-bool is_protect(Snake &me,game &g,path &ans)//判断是否开盾
+bool is_protect(Snake &me, game &g, path &ans) //判断是否开盾
 {
-   if(me.protection>0&&me.duration<2&&ans.dir.size()==0)return true;
-   if(me.protection>5&&ans.val>30)return true;
-   return false;
+    _for(i, 0, 4)
+    {
+        int tx = me.x[0] + action[0][i];
+        int ty = me.y[0] + action[1][i];
+        if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && vis[tx][ty]&&me.duration<2)
+        {
+            
+            return true;
+        }
+    }
+
+    if (g.time <30&&me.duration<2)
+    {
+        
+        return true;
+    }
+    return false;
 }
 void play()
 {
@@ -275,22 +287,17 @@ void play()
     dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
     path ans;
     ans = q.top();
-    if (is_protect(me,g,ans))
+    if (is_protect(me, g, ans))
         cout << '4';
     else
     {
         cout << ans.dir[0];
     }
-
-    // debug
-    //  cout << endl
-    //       << ans.val << endl
-    //       << ans.x[0] << " " << ans.y[0];
 }
 int main()
 {
     play();
 
-    // system("pause");
+    system("pause");
     return 0;
 }
