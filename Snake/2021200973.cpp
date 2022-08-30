@@ -14,6 +14,7 @@ int areaValue[48]; // 48个区域分别搜索价值
 #define episode 0  //中心参数
 #define maxdepth 10
 #define gamma 1 //路径惩罚参数
+
 struct reward
 {
     int x, y, v;
@@ -93,7 +94,7 @@ void val_cal(game &g, path &p) // calculate the path val_cal
 
     p.val = val_1 * alpha + val_2 * beta;
 }
-
+bool is_attack(Snake &me, path &ans);
 int eva(int i, int j) //计算地理位置加成
 {
     int d = Mdis(i, j, 15, 20); //曼哈顿距离
@@ -154,31 +155,32 @@ game::game()
                 vis[this->players[i].x[j]][this->players[i].y[j]] = 1;
             }
             //标记蛇头周围的2格
-            vis[players[i].x[0]][players[i].y[0]]=players[i].score;
-            if(players[i].score>30){
-            _for(k, 0, 8)
+            vis[players[i].x[0]][players[i].y[0]] = players[i].score;
+            if (players[i].score > 30)
             {
-
-                int tx = players[i].x[0] + action[0][k];
-                int ty = players[i].y[0] + action[1][k];
-                if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+                _for(k, 0, 8)
                 {
-                    vis[tx][ty] = players[i].score;
+
+                    int tx = players[i].x[0] + action[0][k];
+                    int ty = players[i].y[0] + action[1][k];
+                    if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+                    {
+                        vis[tx][ty] = players[i].score;
+                    }
                 }
-            }
             }
             else
             {
                 _for(k, 0, 4)
-            {
-
-                int tx = players[i].x[0] + action[0][k];
-                int ty = players[i].y[0] + action[1][k];
-                if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
                 {
-                    vis[tx][ty] = players[i].score;
+
+                    int tx = players[i].x[0] + action[0][k];
+                    int ty = players[i].y[0] + action[1][k];
+                    if (tx >= 0 && tx < 30 && ty >= 0 && ty < 40)
+                    {
+                        vis[tx][ty] = players[i].score;
+                    }
                 }
-            }
             }
         }
         else
@@ -262,7 +264,7 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
         {
             tx = posx + action[0][i];
             ty = posy + action[1][i];
-            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && Visit[tx][ty] <= 2 && (p.duration > 1 || vis[tx][ty]==0)) // Do not run the wall
+            if (tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && Visit[tx][ty] <= 2 && (p.duration > 1 || vis[tx][ty] == 0)) // Do not run the wall
             {
                 Visit[tx][ty]++;
                 if (dir - i != 2 && i - dir != 2)
@@ -282,6 +284,63 @@ void dfs(game &g, int depth, path p, priority_queue<path> &q, int posx, int posy
         }
     }
     return;
+}
+
+struct point
+{
+    int x, y, dir;
+    int h, g;
+    bool operator<(const point &q) const
+    {
+        return h + g < q.h + q.g;
+    }
+};
+priority_queue<point> open;
+set<point> closed;
+void get_close(Snake &me, Snake &goal, path &p)
+{
+    if (Mdis(me.x[0], me.y[0], goal.x[0], goal.y[0]) <= 2)
+    {
+        is_attack(me, p);
+        return;
+    }
+    point node;
+    node.x = me.x[0];
+    node.y = me.y[0];
+    node.h = Mdis(me.x[0], me.y[0], goal.x[0], goal.y[0]);
+    node.g = 0;
+    node.dir = me.direction;
+    open.push(node);
+    while (!open.empty())
+    {
+        point ans = open.top();
+        p.x.push_back(ans.x);
+        p.y.push_back(ans.y);
+        p.dir.push_back(ans.dir);
+        if (Mdis(ans.x, ans.y, goal.x[0], goal.y[0]) <= 2)
+        {
+            break;
+        }
+        _for(i, 0, 4)
+        {
+            point next;
+            int tx = ans.x + action[0][i];
+            int ty = ans.y + action[1][i];
+            if (abs(i - ans.dir) != 2 && tx < 30 && tx >= 0 && ty >= 0 && ty < 40 && Visit[tx][ty] <= 2 && (p.duration > 1 || vis[tx][ty] == 0))
+            {
+                next.x = tx;
+                next.y = ty;
+                next.g = Mdis(tx, ty, me.x[0], me.y[0]);
+                next.h = Mdis(tx, ty, goal.x[0], goal.y[0]);
+                next.dir = i;
+                if (closed.find(next) == closed.end())
+                    open.push(next);
+            }
+        }
+        open.pop();
+        closed.insert(ans);
+        p.duration--;
+    }
 }
 
 bool is_protect(Snake &me, game &g, path &ans) //判断是否开盾
@@ -305,9 +364,9 @@ bool is_attack(Snake &me, path &ans)
 {
     int tx = ans.x[0];
     int ty = ans.y[0];
-    if (vis[tx][ty] > 50&&me.score>30)
+    if (vis[tx][ty] > 50 && me.score > 30)
     {
-        cout<<"5 "<<tx-me.x[0]<<" "<<ty-me.y[0];
+        cout << "5 " << tx - me.x[0] << " " << ty - me.y[0];
         return true;
     }
     return false;
@@ -318,18 +377,62 @@ void play()
 
     game g;
     Snake me = search_snake(g, mynum); // get the infomation about myself
-    priority_queue<path> q;
+
     path p;
-    p.duration = me.duration-1;
-    dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
-    path ans;
-    ans = q.top();
-    if (is_protect(me, g, ans))
-        cout << '4';
-    else if(is_attack(me,ans));
-    else 
+    p.duration = me.duration - 1;
+    int flag = 0;
+    int minn = 1000;
+    _for(i, 0, g.players.size())
     {
-        cout << ans.dir[0];
+        if (g.players[i].number != mynum)
+        {
+            if (Mdis(me.x[0], me.y[0], g.players[i].x[0], g.players[i].y[0]) < minn)
+            {
+                flag = i;
+                minn = Mdis(me.x[0], me.y[0], g.players[i].x[0], g.players[i].y[0]);
+            }
+        }
+    }
+    if (me.score < 60||me.score>200||Mdis(g.players[flag].x[0],g.players[flag].y[0],me.x[0],me.y[0])>5)
+    {
+        priority_queue<path> q;
+        dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
+        path ans;
+        ans = q.top();
+        if (is_protect(me, g, ans))
+            cout << '4';
+        else
+        {
+            cout << ans.dir[0];
+        }
+    }
+    else if(g.players[flag].score>80&&g.players.size()>5)
+    {
+
+        path ans;
+        get_close(me, g.players[flag], ans);
+        if (is_protect(me, g, ans))
+            cout << '4';
+        else if (is_attack(me, ans))
+            ;
+        else
+        {
+            cout << ans.dir[0];
+        }
+    }
+    else
+    {
+        priority_queue<path> q;
+        dfs(g, 0, p, q, me.x[0], me.y[0], me.direction); // get all the path
+        path ans;
+        ans = q.top();
+        if (is_protect(me, g, ans))
+            cout << '4';
+        else
+        {
+            cout << ans.dir[0];
+        }
+
     }
 }
 int main()
